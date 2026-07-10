@@ -528,3 +528,10 @@ main {
         flex-direction: column;
     }
 }
+.prompt-subtext {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #555555;
+}
