@@ -16,7 +16,7 @@
     <header class="hero">
         <div class="eyebrow">YOUR ANGKATAN DIRECTORY</div>
 
-        <h1>PISTON 2026</h1>
+        <h1>Departemen Teknik Mesin 2025</h1>
         <h2>KNOW YOUR ANGKATAN</h2>
 
         <p class="hero-copy">
@@ -664,18 +664,21 @@
             document.getElementById("typeAsal").value = "";
 
             if (selectedTarget === "name") {
-                document.getElementById("quizPrompt")
-                    .textContent =
-                    "What is this person's nickname?";
-            } else if (selectedTarget === "asal") {
-                document.getElementById("quizPrompt")
-                    .textContent =
-                    "Where is this person from?";
-            } else {
-                document.getElementById("quizPrompt")
-                    .textContent =
-                    "What is this person's nickname and asal?";
-            }
+    			document.getElementById("quizPrompt")
+        		.textContent =
+        		"What is this person's nickname?";
+			} else if (selectedTarget === "asal") {
+    			document.getElementById("quizPrompt")
+        			.innerHTML =
+        			`${person.nama_panggilan}<br>
+        			<span class="prompt-subtext">
+            			Where is this person from?
+        			</span>`;
+			} else {
+    			document.getElementById("quizPrompt")
+        			.textContent =
+        			"What is this person's nickname and asal?";
+			}
 
             if (selectedMode === "multiple") {
                 multipleChoiceBox.classList.remove("hidden");
