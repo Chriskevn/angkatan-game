@@ -16,7 +16,7 @@
     <header class="hero">
         <div class="eyebrow">YOUR ANGKATAN DIRECTORY</div>
 
-        <h1>Departemen Teknik Mesin 2025</h1>
+        <h1>PISTON 2026</h1>
         <h2>KNOW YOUR ANGKATAN</h2>
 
         <p class="hero-copy">
@@ -322,14 +322,6 @@
 
                         <div class="quiz-actions">
                             <button
-                                id="showAnswerBtn"
-                                class="secondary-btn"
-                                onclick="toggleQuizAnswer()"
-                            >
-                                Show Answer
-                            </button>
-
-                            <button
                                 class="secondary-btn"
                                 onclick="restartQuiz()"
                             >
@@ -398,7 +390,6 @@
         let quizStreak = 0;
         let bestQuizStreak = 0;
         let questionAnswered = false;
-        let answerVisible = false;
 
         function showPage(page) {
             const directoryPage =
@@ -630,7 +621,6 @@
 
         function renderQuestion() {
             questionAnswered = false;
-            answerVisible = false;
 
             const person =
                 quizQuestions[currentQuestionIndex];
@@ -661,9 +651,6 @@
 
             document.getElementById("nextQuestionBtn")
                 .classList.add("hidden");
-
-            document.getElementById("showAnswerBtn")
-                .textContent = "Show Answer";
 
             const multipleChoiceBox =
                 document.getElementById("multipleChoiceBox");
@@ -842,19 +829,29 @@
         }
 
         function handleWrongAnswer(person) {
-            quizStreak = 0;
+    		quizStreak = 0;
 
-            document.getElementById("quizFeedback")
-                .textContent =
-                `Wrong. Answer: ${getCorrectText(person)}`;
+    		let answerText = "";
 
-            document.getElementById("quizFeedback")
-                .className =
-                "quiz-feedback feedback-wrong";
+    		if (selectedTarget === "name") {
+        		answerText = `${person.nama_panggilan}, ${person.asal}`;
+    		}
+    		else if (selectedTarget === "asal") {
+        		answerText = `${person.asal} (${person.nama_panggilan})`;
+    		}
+    		else {
+        		answerText = `${person.nama_panggilan}, ${person.asal}`;
+    		}
 
-            updateQuizNumbers();
-            showNextButton();
-        }
+    		document.getElementById("quizFeedback").textContent =
+        		`Wrong. Answer: ${answerText}`;
+
+    		document.getElementById("quizFeedback").className =
+        		"quiz-feedback feedback-wrong";
+
+    		updateQuizNumbers();
+    		showNextButton();
+	}
 
         function updateQuizNumbers() {
             document.getElementById("quizScore")
@@ -867,32 +864,6 @@
         function showNextButton() {
             document.getElementById("nextQuestionBtn")
                 .classList.remove("hidden");
-        }
-
-        function toggleQuizAnswer() {
-            const person =
-                quizQuestions[currentQuestionIndex];
-
-            const feedback =
-                document.getElementById("quizFeedback");
-
-            const button =
-                document.getElementById("showAnswerBtn");
-
-            if (!answerVisible) {
-                feedback.textContent =
-                    `Answer: ${getCorrectText(person)}`;
-
-                feedback.className =
-                    "quiz-feedback feedback-shown";
-
-                button.textContent = "Hide Answer";
-                answerVisible = true;
-            } else {
-                feedback.textContent = "";
-                button.textContent = "Show Answer";
-                answerVisible = false;
-            }
         }
 
         function nextQuestion() {
@@ -971,7 +942,6 @@
                 .classList.add("hidden");
 
             questionAnswered = false;
-            answerVisible = false;
         }
 
         function openImage(src) {
