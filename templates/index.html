@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Aggregate Book</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+    <header class="hero">
+        <div class="eyebrow">YOUR ANGKATAN DIRECTORY</div>
+
+        <h1>PISTON 2026</h1>
+        <h2>KNOW YOUR ANGKATAN</h2>
+
+        <p class="hero-copy">
+            Directory of
+            <strong>{{ people|length }} people</strong>
+            and a guessing game to help you memorize their
+            nickname and origin.
+        </p>
+
+        <nav class="main-tabs">
+            <button
+                id="directoryTab"
+                class="tab-btn active"
+                onclick="showPage('directory')"
+            >
+                DIRECTORY
+            </button>
+
+            <button
+                id="quizTab"
+                class="tab-btn"
+                onclick="showPage('quiz')"
+            >
+                GUESSING GAME
+            </button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="directoryPage" class="page-section">
+            <div class="toolbar">
+                <input
+                    id="searchInput"
+                    type="search"
+                    placeholder="Search name, nickname, asal, SC, or ID..."
+                    oninput="filterDirectory()"
+                >
+
+                <select
+                    id="directorySC"
+                    onchange="filterDirectory()"
+                >
+                    <option value="all">All Groups</option>
+
+                    {% for sc in sc_list %}
+                    <option value="{{ sc }}">
+                        {% if sc == "0" %}
+                            Tanpa SC
+                        {% else %}
+                            SC {{ sc }}
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select
+                    id="sortSelect"
+                    onchange="sortDirectory()"
+                >
+                    <option value="id">Sort: ID</option>
+                    <option value="name">Sort: Nickname</option>
+                    <option value="asal">Sort: Asal</option>
+                    <option value="sc">Sort: SC</option>
+                </select>
+
+                <strong id="directoryCount">
+                    {{ people|length }} / {{ people|length }}
+                </strong>
+            </div>
+
+            <div id="directoryGrid" class="directory-grid">
+                {% for p in people %}
+                <article
+                    class="directory-card"
+                    data-id="{{ p.id }}"
+                    data-sc="{{ p.sc }}"
+                    data-name="{{ p.nama_panggilan|lower }}"
+                    data-asal="{{ p.asal|lower }}"
+                >
+                    <div class="photo-wrap">
+                        <span class="number-badge">
+                            {{ "%03d"|format(p.id|int) }}
+                        </span>
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='faces/' + p.image_file
+                            ) }}"
+                            alt="Photo"
+                            onclick="openImage(this.src)"
+                        >
+                    </div>
+
+                    <div class="directory-info">
+                        <h3>{{ p.nama_panggilan }}</h3>
+
+                        <p>
+                            <span>Asal</span>
+                            {{ p.asal }}
+                        </p>
+
+                        <p>
+                            <span>SC</span>
+
+                            {% if p.sc == "0" %}
+                                Tanpa SC
+                            {% else %}
+                                SC {{ p.sc }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="quizPage" class="page-section hidden">
+            <div id="quizSetup" class="setup-card">
+                <h2>Set Up Your Quiz</h2>
+
+                <p>
+                    Choose what you want to memorize,
+                    how you want to answer, and which SC to study.
+                </p>
+
+                <div class="setup-group">
+                    <h3>SC Selection</h3>
+
+                    <select id="quizSC">
+                        <option value="all">All Groups</option>
+
+                        {% for sc in sc_list %}
+                        <option value="{{ sc }}">
+                            {% if sc == "0" %}
+                                Tanpa SC
+                            {% else %}
+                                SC {{ sc }}
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="setup-group">
+                    <h3>Answer Target</h3>
+
+                    <div class="choice-row">
+                        <button
+                            class="choice-btn selected"
+                            data-group="target"
+                            data-value="name"
+                        >
+                            Nickname
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="target"
+                            data-value="asal"
+                        >
+                            Asal
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="target"
+                            data-value="both"
+                        >
+                            Both
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setup-group">
+                    <h3>Answer Mode</h3>
+
+                    <div class="choice-row">
+                        <button
+                            class="choice-btn selected"
+                            data-group="mode"
+                            data-value="multiple"
+                        >
+                            Multiple Choice
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="mode"
+                            data-value="type"
+                        >
+                            Type Answer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setup-group">
+                    <h3>Number of Questions</h3>
+
+                    <div class="choice-row">
+                        <button
+                            class="choice-btn selected"
+                            data-group="count"
+                            data-value="10"
+                        >
+                            10
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="count"
+                            data-value="20"
+                        >
+                            20
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="count"
+                            data-value="50"
+                        >
+                            50
+                        </button>
+
+                        <button
+                            class="choice-btn"
+                            data-group="count"
+                            data-value="all"
+                        >
+                            All
+                        </button>
+                    </div>
+                </div>
+
+                <button
+                    class="primary-btn"
+                    onclick="startQuiz()"
+                >
+                    Start Quiz
+                </button>
+            </div>
+
+            <div id="quizGame" class="quiz-card hidden">
+                <div class="quiz-header-actions">
+                    <button
+                        class="back-btn"
+                        onclick="backToSetup()"
+                    >
+                        ← Back to Quiz Setup
+                    </button>
+                </div>
+
+                <div class="quiz-top">
+                    <div>
+                        <span id="questionProgress">
+                            Question 1 / 10
+                        </span>
+
+                        <div class="progress-track">
+                            <div id="quizProgressBar"></div>
+                        </div>
+                    </div>
+
+                    <div class="score-box">
+                        <span>Score <strong id="quizScore">0</strong></span>
+                        <span>Streak <strong id="quizStreak">0</strong></span>
+                    </div>
+                </div>
+
+                <div class="quiz-person">
+                    <img
+                        id="quizImage"
+                        src=""
+                        alt="Quiz face"
+                        onclick="openImage(this.src)"
+                    >
+
+                    <div class="quiz-answer-area">
+                        <p id="quizPrompt" class="quiz-prompt"></p>
+
+                        <div id="multipleChoiceBox"></div>
+
+                        <div id="typeAnswerBox" class="hidden">
+                            <input
+                                id="typeName"
+                                type="text"
+                                placeholder="Nickname"
+                            >
+
+                            <input
+                                id="typeAsal"
+                                type="text"
+                                placeholder="Asal"
+                            >
+
+                            <button
+                                class="primary-btn"
+                                onclick="submitTypedAnswer()"
+                            >
+                                Verify
+                            </button>
+                        </div>
+
+                        <div class="quiz-actions">
+                            <button
+                                id="showAnswerBtn"
+                                class="secondary-btn"
+                                onclick="toggleQuizAnswer()"
+                            >
+                                Show Answer
+                            </button>
+
+                            <button
+                                class="secondary-btn"
+                                onclick="restartQuiz()"
+                            >
+                                Restart
+                            </button>
+                        </div>
+
+                        <p id="quizFeedback" class="quiz-feedback"></p>
+
+                        <button
+                            id="nextQuestionBtn"
+                            class="primary-btn hidden"
+                            onclick="nextQuestion()"
+                        >
+                            Next Question
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quizResult" class="result-card hidden">
+                <h2>Quiz Complete</h2>
+
+                <div class="result-number" id="finalScore">0 / 10</div>
+
+                <p id="finalAccuracy">Accuracy: 0%</p>
+                <p id="bestStreak">Best streak: 0</p>
+
+                <div class="result-actions">
+                    <button
+                        class="primary-btn"
+                        onclick="restartQuiz()"
+                    >
+                        Try Again
+                    </button>
+
+                    <button
+                        class="secondary-btn"
+                        onclick="backToSetup()"
+                    >
+                        Change Settings
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div
+        id="imageModal"
+        class="image-modal hidden"
+        onclick="closeImage()"
+    >
+        <img id="modalImage" alt="Enlarged photo">
+    </div>
+
+    <script>
+        const people = {{ people|tojson }};
+
+        let selectedTarget = "name";
+        let selectedMode = "multiple";
+        let selectedCount = "10";
+
+        let quizQuestions = [];
+        let currentQuestionIndex = 0;
+        let quizScore = 0;
+        let quizStreak = 0;
+        let bestQuizStreak = 0;
+        let questionAnswered = false;
+        let answerVisible = false;
+
+        function showPage(page) {
+            const directoryPage =
+                document.getElementById("directoryPage");
+
+            const quizPage =
+                document.getElementById("quizPage");
+
+            const directoryTab =
+                document.getElementById("directoryTab");
+
+            const quizTab =
+                document.getElementById("quizTab");
+
+            if (page === "directory") {
+                directoryPage.classList.remove("hidden");
+                quizPage.classList.add("hidden");
+                directoryTab.classList.add("active");
+                quizTab.classList.remove("active");
+            } else {
+                quizPage.classList.remove("hidden");
+                directoryPage.classList.add("hidden");
+                quizTab.classList.add("active");
+                directoryTab.classList.remove("active");
+            }
+        }
+
+        function filterDirectory() {
+            const search =
+                document.getElementById("searchInput")
+                    .value
+                    .trim()
+                    .toLowerCase();
+
+            const selectedSC =
+                document.getElementById("directorySC").value;
+
+            const cards = [
+                ...document.querySelectorAll(".directory-card")
+            ];
+
+            let visible = 0;
+
+            cards.forEach(card => {
+                const matchesSC =
+                    selectedSC === "all"
+                    || card.dataset.sc === selectedSC;
+
+                const searchableText = [
+                    card.dataset.id,
+                    card.dataset.sc,
+                    card.dataset.name,
+                    card.dataset.asal
+                ].join(" ");
+
+                const matchesSearch =
+                    searchableText.includes(search);
+
+                const shouldShow =
+                    matchesSC && matchesSearch;
+
+                card.style.display =
+                    shouldShow ? "" : "none";
+
+                if (shouldShow) {
+                    visible++;
+                }
+            });
+
+            document.getElementById("directoryCount").textContent =
+                `${visible} / ${people.length}`;
+        }
+
+        function sortDirectory() {
+            const grid =
+                document.getElementById("directoryGrid");
+
+            const sortBy =
+                document.getElementById("sortSelect").value;
+
+            const cards = [
+                ...grid.querySelectorAll(".directory-card")
+            ];
+
+            cards.sort((a, b) => {
+                if (sortBy === "id") {
+                    return Number(a.dataset.id)
+                        - Number(b.dataset.id);
+                }
+
+                if (sortBy === "sc") {
+                    const scDifference =
+                        Number(a.dataset.sc)
+                        - Number(b.dataset.sc);
+
+                    if (scDifference !== 0) {
+                        return scDifference;
+                    }
+
+                    return Number(a.dataset.id)
+                        - Number(b.dataset.id);
+                }
+
+                return a.dataset[sortBy]
+                    .localeCompare(b.dataset[sortBy]);
+            });
+
+            cards.forEach(card => grid.appendChild(card));
+        }
+
+        document.querySelectorAll(".choice-btn")
+            .forEach(button => {
+                button.addEventListener("click", () => {
+                    const group = button.dataset.group;
+
+                    document.querySelectorAll(
+                        `.choice-btn[data-group="${group}"]`
+                    ).forEach(item => {
+                        item.classList.remove("selected");
+                    });
+
+                    button.classList.add("selected");
+
+                    if (group === "target") {
+                        selectedTarget = button.dataset.value;
+                    }
+
+                    if (group === "mode") {
+                        selectedMode = button.dataset.value;
+                    }
+
+                    if (group === "count") {
+                        selectedCount = button.dataset.value;
+                    }
+                });
+            });
+
+        function shuffle(items) {
+            const copy = [...items];
+
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(
+                    Math.random() * (i + 1)
+                );
+
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+
+            return copy;
+        }
+
+        function startQuiz() {
+            const selectedSC =
+                document.getElementById("quizSC").value;
+
+            let pool = people.filter(person => {
+                return selectedSC === "all"
+                    || person.sc === selectedSC;
+            });
+
+            pool = shuffle(pool);
+
+            const requestedCount =
+                selectedCount === "all"
+                    ? pool.length
+                    : Number(selectedCount);
+
+            quizQuestions =
+                pool.slice(0, Math.min(requestedCount, pool.length));
+
+            if (quizQuestions.length === 0) {
+                alert("No people are available for this SC.");
+                return;
+            }
+
+            currentQuestionIndex = 0;
+            quizScore = 0;
+            quizStreak = 0;
+            bestQuizStreak = 0;
+
+            document.getElementById("quizSetup")
+                .classList.add("hidden");
+
+            document.getElementById("quizResult")
+                .classList.add("hidden");
+
+            document.getElementById("quizGame")
+                .classList.remove("hidden");
+
+            renderQuestion();
+        }
+
+        function getCorrectText(person) {
+            if (selectedTarget === "name") {
+                return person.nama_panggilan;
+            }
+
+            if (selectedTarget === "asal") {
+                return person.asal;
+            }
+
+            return `${person.nama_panggilan} — ${person.asal}`;
+        }
+
+        function makeMultipleChoiceOptions(person) {
+            const correct = getCorrectText(person);
+
+            const distractorPool = people.filter(item => {
+                return item.id !== person.id;
+            });
+
+            const options = [correct];
+
+            for (const candidate of shuffle(distractorPool)) {
+                const candidateText =
+                    getCorrectText(candidate);
+
+                if (!options.includes(candidateText)) {
+                    options.push(candidateText);
+                }
+
+                if (options.length === 4) {
+                    break;
+                }
+            }
+
+            return shuffle(options);
+        }
+
+        function renderQuestion() {
+            questionAnswered = false;
+            answerVisible = false;
+
+            const person =
+                quizQuestions[currentQuestionIndex];
+
+            document.getElementById("questionProgress")
+                .textContent =
+                `Question ${currentQuestionIndex + 1}`
+                + ` / ${quizQuestions.length}`;
+
+            document.getElementById("quizScore")
+                .textContent = quizScore;
+
+            document.getElementById("quizStreak")
+                .textContent = quizStreak;
+
+            const progress =
+                (currentQuestionIndex / quizQuestions.length)
+                * 100;
+
+            document.getElementById("quizProgressBar")
+                .style.width = progress + "%";
+
+            document.getElementById("quizImage").src =
+                `/static/faces/${person.image_file}`;
+
+            document.getElementById("quizFeedback")
+                .textContent = "";
+
+            document.getElementById("nextQuestionBtn")
+                .classList.add("hidden");
+
+            document.getElementById("showAnswerBtn")
+                .textContent = "Show Answer";
+
+            const multipleChoiceBox =
+                document.getElementById("multipleChoiceBox");
+
+            const typeAnswerBox =
+                document.getElementById("typeAnswerBox");
+
+            multipleChoiceBox.innerHTML = "";
+
+            document.getElementById("typeName").value = "";
+            document.getElementById("typeAsal").value = "";
+
+            if (selectedTarget === "name") {
+                document.getElementById("quizPrompt")
+                    .textContent =
+                    "What is this person's nickname?";
+            } else if (selectedTarget === "asal") {
+                document.getElementById("quizPrompt")
+                    .textContent =
+                    "Where is this person from?";
+            } else {
+                document.getElementById("quizPrompt")
+                    .textContent =
+                    "What is this person's nickname and asal?";
+            }
+
+            if (selectedMode === "multiple") {
+                multipleChoiceBox.classList.remove("hidden");
+                typeAnswerBox.classList.add("hidden");
+
+                const options =
+                    makeMultipleChoiceOptions(person);
+
+                options.forEach(option => {
+                    const button =
+                        document.createElement("button");
+
+                    button.className = "option-btn";
+                    button.textContent = option;
+
+                    button.onclick = () => {
+                        submitMultipleChoice(
+                            button,
+                            option
+                        );
+                    };
+
+                    multipleChoiceBox.appendChild(button);
+                });
+            } else {
+                multipleChoiceBox.classList.add("hidden");
+                typeAnswerBox.classList.remove("hidden");
+
+                const nameInput =
+                    document.getElementById("typeName");
+
+                const asalInput =
+                    document.getElementById("typeAsal");
+
+                nameInput.style.display =
+                    selectedTarget === "asal"
+                    ? "none"
+                    : "";
+
+                asalInput.style.display =
+                    selectedTarget === "name"
+                    ? "none"
+                    : "";
+
+                if (selectedTarget === "asal") {
+                    asalInput.focus();
+                } else {
+                    nameInput.focus();
+                }
+            }
+        }
+
+        function submitMultipleChoice(button, answer) {
+            if (questionAnswered) {
+                return;
+            }
+
+            const person =
+                quizQuestions[currentQuestionIndex];
+
+            const correct =
+                answer === getCorrectText(person);
+
+            questionAnswered = true;
+
+            const optionButtons = [
+                ...document.querySelectorAll(".option-btn")
+            ];
+
+            optionButtons.forEach(optionButton => {
+                optionButton.disabled = true;
+
+                if (
+                    optionButton.textContent
+                    === getCorrectText(person)
+                ) {
+                    optionButton.classList.add("correct-option");
+                }
+            });
+
+            if (correct) {
+                button.classList.add("correct-option");
+                handleCorrectAnswer();
+            } else {
+                button.classList.add("wrong-option");
+                handleWrongAnswer(person);
+            }
+        }
+
+        async function submitTypedAnswer() {
+            if (questionAnswered) {
+                return;
+            }
+
+            const person =
+                quizQuestions[currentQuestionIndex];
+
+            const nameValue =
+                document.getElementById("typeName").value.trim();
+
+            const asalValue =
+                document.getElementById("typeAsal").value.trim();
+
+            const response = await fetch("/verify", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: person.id,
+                    target: selectedTarget,
+                    nama_panggilan: nameValue,
+                    asal: asalValue
+                })
+            });
+
+            const result = await response.json();
+
+            if (!result.ok) {
+                document.getElementById("quizFeedback")
+                    .textContent = result.message;
+
+                return;
+            }
+
+            questionAnswered = true;
+
+            if (result.correct) {
+                handleCorrectAnswer();
+            } else {
+                handleWrongAnswer(person);
+            }
+        }
+
+        function handleCorrectAnswer() {
+            quizScore++;
+            quizStreak++;
+
+            bestQuizStreak =
+                Math.max(bestQuizStreak, quizStreak);
+
+            document.getElementById("quizFeedback")
+                .textContent = "Correct!";
+
+            document.getElementById("quizFeedback")
+                .className =
+                "quiz-feedback feedback-correct";
+
+            updateQuizNumbers();
+            showNextButton();
+        }
+
+        function handleWrongAnswer(person) {
+            quizStreak = 0;
+
+            document.getElementById("quizFeedback")
+                .textContent =
+                `Wrong. Answer: ${getCorrectText(person)}`;
+
+            document.getElementById("quizFeedback")
+                .className =
+                "quiz-feedback feedback-wrong";
+
+            updateQuizNumbers();
+            showNextButton();
+        }
+
+        function updateQuizNumbers() {
+            document.getElementById("quizScore")
+                .textContent = quizScore;
+
+            document.getElementById("quizStreak")
+                .textContent = quizStreak;
+        }
+
+        function showNextButton() {
+            document.getElementById("nextQuestionBtn")
+                .classList.remove("hidden");
+        }
+
+        function toggleQuizAnswer() {
+            const person =
+                quizQuestions[currentQuestionIndex];
+
+            const feedback =
+                document.getElementById("quizFeedback");
+
+            const button =
+                document.getElementById("showAnswerBtn");
+
+            if (!answerVisible) {
+                feedback.textContent =
+                    `Answer: ${getCorrectText(person)}`;
+
+                feedback.className =
+                    "quiz-feedback feedback-shown";
+
+                button.textContent = "Hide Answer";
+                answerVisible = true;
+            } else {
+                feedback.textContent = "";
+                button.textContent = "Show Answer";
+                answerVisible = false;
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+
+            if (
+                currentQuestionIndex
+                >= quizQuestions.length
+            ) {
+                finishQuiz();
+                return;
+            }
+
+            renderQuestion();
+        }
+
+        function finishQuiz() {
+            document.getElementById("quizGame")
+                .classList.add("hidden");
+
+            document.getElementById("quizResult")
+                .classList.remove("hidden");
+
+            const accuracy = Math.round(
+                (quizScore / quizQuestions.length) * 100
+            );
+
+            document.getElementById("finalScore")
+                .textContent =
+                `${quizScore} / ${quizQuestions.length}`;
+
+            document.getElementById("finalAccuracy")
+                .textContent =
+                `Accuracy: ${accuracy}%`;
+
+            document.getElementById("bestStreak")
+                .textContent =
+                `Best streak: ${bestQuizStreak}`;
+        }
+
+        function restartQuiz() {
+            if (quizQuestions.length === 0) {
+                backToSetup();
+                return;
+            }
+
+            quizQuestions = shuffle(quizQuestions);
+            currentQuestionIndex = 0;
+            quizScore = 0;
+            quizStreak = 0;
+            bestQuizStreak = 0;
+
+            document.getElementById("quizResult")
+                .classList.add("hidden");
+
+            document.getElementById("quizGame")
+                .classList.remove("hidden");
+
+            renderQuestion();
+        }
+
+        function backToSetup() {
+            document.getElementById("quizGame")
+                .classList.add("hidden");
+
+            document.getElementById("quizResult")
+                .classList.add("hidden");
+
+            document.getElementById("quizSetup")
+                .classList.remove("hidden");
+
+            document.getElementById("quizFeedback")
+                .textContent = "";
+
+            document.getElementById("nextQuestionBtn")
+                .classList.add("hidden");
+
+            questionAnswered = false;
+            answerVisible = false;
+        }
+
+        function openImage(src) {
+            document.getElementById("modalImage").src = src;
+
+            document.getElementById("imageModal")
+                .classList.remove("hidden");
+        }
+
+        function closeImage() {
+            document.getElementById("imageModal")
+                .classList.add("hidden");
+        }
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                closeImage();
+            }
+
+            if (
+                event.key === "Enter"
+                && selectedMode === "type"
+                && !document.getElementById("quizGame")
+                    .classList.contains("hidden")
+                && !questionAnswered
+            ) {
+                submitTypedAnswer();
+            }
+        });
+    </script>
+</body>
+</html>
