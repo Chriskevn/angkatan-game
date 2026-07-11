@@ -16,14 +16,14 @@
     <header class="hero">
         <div class="eyebrow">YOUR ANGKATAN DIRECTORY</div>
 
-        <h1>Departemen Teknik Mesin 2025</h1>
+        <h1>AGGREGATE BOOK</h1>
         <h2>KNOW YOUR ANGKATAN</h2>
 
         <p class="hero-copy">
             Directory of
             <strong>{{ people|length }} people</strong>
             and a guessing game to help you memorize their
-            nickname and origin.
+            nickname and asal.
         </p>
 
         <nav class="main-tabs">
@@ -59,16 +59,10 @@
                     id="directorySC"
                     onchange="filterDirectory()"
                 >
-                    <option value="all">All Groups</option>
+                    <option value="all">All SC</option>
 
                     {% for sc in sc_list %}
-                    <option value="{{ sc }}">
-                        {% if sc == "0" %}
-                            Tanpa SC
-                        {% else %}
-                            SC {{ sc }}
-                        {% endif %}
-                    </option>
+                    <option value="{{ sc }}">SC {{ sc }}</option>
                     {% endfor %}
                 </select>
 
@@ -121,12 +115,7 @@
 
                         <p>
                             <span>SC</span>
-
-                            {% if p.sc == "0" %}
-                                Tanpa SC
-                            {% else %}
-                                SC {{ p.sc }}
-                            {% endif %}
+                            SC {{ p.sc }}
                         </p>
                     </div>
                 </article>
@@ -144,24 +133,39 @@
                 </p>
 
                 <div class="setup-group">
+                    <h3>Quiz Type</h3>
+                    <div class="choice-row">
+                        <button class="choice-btn selected" data-group="quizType" data-value="face">Face Quiz</button>
+                        <button class="choice-btn" data-group="quizType" data-value="list">List Members</button>
+                    </div>
+                </div>
+
+                <div id="faceSCGroup" class="setup-group">
                     <h3>SC Selection</h3>
 
                     <select id="quizSC">
-                        <option value="all">All Groups</option>
+                        <option value="all">All SC</option>
 
                         {% for sc in sc_list %}
-                        <option value="{{ sc }}">
-                            {% if sc == "0" %}
-                                Tanpa SC
-                            {% else %}
-                                SC {{ sc }}
-                            {% endif %}
-                        </option>
+                        <option value="{{ sc }}">SC {{ sc }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="setup-group">
+                <div id="listSCGroup" class="setup-group hidden">
+                    <h3>Select One or More SCs</h3>
+                    <div class="list-sc-selection">
+                        <button type="button" class="list-sc-btn" data-sc="all" onclick="toggleAllListSCs(this)">All Groups</button>
+                        {% for sc in sc_list %}
+                        <button type="button" class="list-sc-btn" data-sc="{{ sc }}" onclick="toggleListSC(this)">
+                            {% if sc == "0" %}Tanpa SC{% else %}SC {{ sc }}{% endif %}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <p id="listSCMessage" class="setup-message">Select at least one SC.</p>
+                </div>
+
+                <div id="answerTargetGroup" class="setup-group">
                     <h3>Answer Target</h3>
 
                     <div class="choice-row">
@@ -191,7 +195,7 @@
                     </div>
                 </div>
 
-                <div class="setup-group">
+                <div id="answerModeGroup" class="setup-group">
                     <h3>Answer Mode</h3>
 
                     <div class="choice-row">
@@ -213,7 +217,7 @@
                     </div>
                 </div>
 
-                <div class="setup-group">
+                <div id="questionCountGroup" class="setup-group">
                     <h3>Number of Questions</h3>
 
                     <div class="choice-row">
@@ -257,6 +261,16 @@
                 >
                     Start Quiz
                 </button>
+            </div>
+
+            <div id="listQuizGame" class="list-quiz-card hidden">
+                <div class="quiz-header-actions"><button class="back-btn" onclick="backToSetup()">← Back to Quiz Setup</button></div>
+                <div class="list-quiz-heading">
+                    <div><h2>List the Members</h2><p>Enter nickname and asal. Order does not matter. Press Enter to move and submit.</p></div>
+                    <div class="list-total-score"><strong id="listTotalFound">0</strong> / <span id="listTotalMembers">0</span></div>
+                </div>
+                <div class="progress-track list-total-progress"><div id="listTotalProgressBar"></div></div>
+                <div id="listQuizColumns" class="list-quiz-columns"></div>
             </div>
 
             <div id="quizGame" class="quiz-card hidden">
@@ -321,6 +335,7 @@
                         </div>
 
                         <div class="quiz-actions">
+
                             <button
                                 class="secondary-btn"
                                 onclick="restartQuiz()"
@@ -349,6 +364,12 @@
 
                 <p id="finalAccuracy">Accuracy: 0%</p>
                 <p id="bestStreak">Best streak: 0</p>
+
+                <section id="wrongReviewSection" class="wrong-review hidden">
+                    <h3>People You Got Wrong</h3>
+                    <p>Review these people before trying again.</p>
+                    <div id="wrongPeopleList" class="wrong-people-list"></div>
+                </section>
 
                 <div class="result-actions">
                     <button
@@ -380,9 +401,12 @@
     <script>
         const people = {{ people|tojson }};
 
+        let selectedQuizType = "face";
         let selectedTarget = "name";
         let selectedMode = "multiple";
         let selectedCount = "10";
+        let selectedListSCs = new Set();
+        let listQuizState = {};
 
         let quizQuestions = [];
         let currentQuestionIndex = 0;
@@ -390,6 +414,7 @@
         let quizStreak = 0;
         let bestQuizStreak = 0;
         let questionAnswered = false;
+        let wrongPeople = [];
 
         function showPage(page) {
             const directoryPage =
@@ -414,6 +439,8 @@
                 directoryPage.classList.add("hidden");
                 quizTab.classList.add("active");
                 directoryTab.classList.remove("active");
+
+                showQuizScreen("setup");
             }
         }
 
@@ -513,6 +540,11 @@
 
                     button.classList.add("selected");
 
+                    if (group === "quizType") {
+                        selectedQuizType = button.dataset.value;
+                        updateQuizSetupVisibility();
+                    }
+
                     if (group === "target") {
                         selectedTarget = button.dataset.value;
                     }
@@ -526,6 +558,42 @@
                     }
                 });
             });
+
+        function updateQuizSetupVisibility() {
+            const isList = selectedQuizType === "list";
+            document.getElementById("faceSCGroup").classList.toggle("hidden", isList);
+            document.getElementById("answerTargetGroup").classList.toggle("hidden", isList);
+            document.getElementById("answerModeGroup").classList.toggle("hidden", isList);
+            document.getElementById("questionCountGroup").classList.toggle("hidden", isList);
+            document.getElementById("listSCGroup").classList.toggle("hidden", !isList);
+        }
+
+        function toggleListSC(button) {
+            const sc = button.dataset.sc;
+            if (selectedListSCs.has(sc)) { selectedListSCs.delete(sc); button.classList.remove("selected"); }
+            else { selectedListSCs.add(sc); button.classList.add("selected"); }
+            updateAllGroupsButton(); updateListSCMessage();
+        }
+
+        function toggleAllListSCs(button) {
+            const buttons=[...document.querySelectorAll('.list-sc-btn:not([data-sc="all"])')];
+            const selectAll=selectedListSCs.size!==buttons.length;
+            selectedListSCs.clear();
+            buttons.forEach(b=>{ if(selectAll){selectedListSCs.add(b.dataset.sc);b.classList.add("selected");}else b.classList.remove("selected");});
+            button.classList.toggle("selected",selectAll); updateListSCMessage();
+        }
+
+        function updateAllGroupsButton(){
+            const all=document.querySelector('.list-sc-btn[data-sc="all"]');
+            const buttons=[...document.querySelectorAll('.list-sc-btn:not([data-sc="all"])')];
+            all.classList.toggle("selected",buttons.length>0&&selectedListSCs.size===buttons.length);
+        }
+
+        function updateListSCMessage(){
+            document.getElementById("listSCMessage").textContent=selectedListSCs.size?`${selectedListSCs.size} group(s) selected.`:"Select at least one SC.";
+        }
+
+        function getSCDisplayName(sc){ return sc==="0"?"Tanpa SC":`SC ${sc}`; }
 
         function shuffle(items) {
             const copy = [...items];
@@ -541,7 +609,22 @@
             return copy;
         }
 
+        function showQuizScreen(screenName) {
+            const screens = {
+                setup: document.getElementById("quizSetup"),
+                face: document.getElementById("quizGame"),
+                list: document.getElementById("listQuizGame"),
+                result: document.getElementById("quizResult")
+            };
+
+            Object.entries(screens).forEach(([name, element]) => {
+                element.classList.toggle("hidden", name !== screenName);
+            });
+        }
+
         function startQuiz() {
+            if (selectedQuizType === "list") { startListQuiz(); return; }
+
             const selectedSC =
                 document.getElementById("quizSC").value;
 
@@ -569,17 +652,125 @@
             quizScore = 0;
             quizStreak = 0;
             bestQuizStreak = 0;
+            wrongPeople = [];
 
-            document.getElementById("quizSetup")
-                .classList.add("hidden");
-
-            document.getElementById("quizResult")
-                .classList.add("hidden");
-
-            document.getElementById("quizGame")
-                .classList.remove("hidden");
-
+            showQuizScreen("face");
             renderQuestion();
+        }
+
+        function startListQuiz(){
+            if(!selectedListSCs.size){document.getElementById("listSCMessage").textContent="Please select at least one SC first.";return;}
+            listQuizState={}; let total=0;
+            [...selectedListSCs].sort((a,b)=>Number(a)-Number(b)).forEach(sc=>{
+                const members=people.filter(p=>String(p.sc)===String(sc));
+                listQuizState[sc]={members,foundIds:new Set()}; total+=members.length;
+            });
+            showQuizScreen("list");
+            document.getElementById("listTotalMembers").textContent=total;
+            renderListQuizColumns(); updateListQuizProgress();
+        }
+
+        function renderListQuizColumns(){
+            const container=document.getElementById("listQuizColumns"); container.innerHTML="";
+            const scs=Object.keys(listQuizState).sort((a,b)=>Number(a)-Number(b));
+            scs.forEach(sc=>{
+                const state=listQuizState[sc], col=document.createElement("section"); col.className="list-sc-column";
+                col.innerHTML=`<div class="list-sc-header"><h3>${getSCDisplayName(sc)}</h3><p><strong id="listFound-${sc}">0</strong> / ${state.members.length} found</p></div><div class="progress-track list-column-progress"><div id="listProgress-${sc}"></div></div><div class="list-entry-form"><input id="listName-${sc}" type="text" placeholder="Nama panggilan" autocomplete="off"><input id="listAsal-${sc}" type="text" placeholder="Asal" autocomplete="off"><button class="primary-btn list-submit-btn" onclick="submitListMember('${sc}')">Add Member</button></div><p id="listFeedback-${sc}" class="list-feedback"></p><div id="listFoundMembers-${sc}" class="found-members-list"></div>`;
+                container.appendChild(col);
+                const n=document.getElementById(`listName-${sc}`),a=document.getElementById(`listAsal-${sc}`);
+                n.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();a.focus();}});
+                a.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();submitListMember(sc);}});
+            });
+            if(scs[0]!==undefined)document.getElementById(`listName-${scs[0]}`).focus();
+        }
+
+        function submitListMember(sc) {
+    const state = listQuizState[sc];
+
+    const n = document.getElementById(`listName-${sc}`);
+    const a = document.getElementById(`listAsal-${sc}`);
+    const f = document.getElementById(`listFeedback-${sc}`);
+
+    const name = n.value.trim();
+    const asal = a.value.trim();
+
+    if (!name || !asal) {
+        f.textContent = "Enter both nickname and asal.";
+        f.className = "list-feedback list-feedback-wrong";
+
+        n.value = "";
+        a.value = "";
+        n.focus();
+
+        return;
+    }
+
+    const person = state.members.find(p =>
+        p.nama_panggilan === name &&
+        p.asal === asal
+    );
+
+    if (!person) {
+        f.textContent =
+            "Not correct. Check spelling and try again.";
+
+        f.className =
+            "list-feedback list-feedback-wrong";
+
+        n.value = "";
+        a.value = "";
+        n.focus();
+
+        return;
+    }
+
+    if (state.foundIds.has(person.id)) {
+        f.textContent =
+            `${person.nama_panggilan} was already entered.`;
+
+        f.className =
+            "list-feedback list-feedback-duplicate";
+
+        n.value = "";
+        a.value = "";
+        n.focus();
+
+        return;
+    }
+
+    state.foundIds.add(person.id);
+
+    f.textContent =
+        `Correct: ${person.nama_panggilan}, ${person.asal}`;
+
+    f.className =
+        "list-feedback list-feedback-correct";
+
+    const item = document.createElement("div");
+
+    item.className = "found-member-item";
+
+    item.innerHTML = `
+        <span>${person.nama_panggilan}</span>
+        <small>${person.asal}</small>
+    `;
+
+    document
+        .getElementById(`listFoundMembers-${sc}`)
+        .appendChild(item);
+
+    n.value = "";
+    a.value = "";
+    n.focus();
+
+    updateListQuizProgress();
+}
+
+        function updateListQuizProgress(){
+            let total=0,found=0;
+            Object.entries(listQuizState).forEach(([sc,state])=>{total+=state.members.length;found+=state.foundIds.size;document.getElementById(`listFound-${sc}`).textContent=state.foundIds.size;document.getElementById(`listProgress-${sc}`).style.width=(state.members.length?state.foundIds.size/state.members.length*100:0)+"%";});
+            document.getElementById("listTotalFound").textContent=found;document.getElementById("listTotalMembers").textContent=total;document.getElementById("listTotalProgressBar").style.width=(total?found/total*100:0)+"%";
+            if(total&&found===total)setTimeout(()=>alert("Congratulations! You listed every selected member."),150);
         }
 
         function getCorrectText(person) {
@@ -664,21 +855,17 @@
             document.getElementById("typeAsal").value = "";
 
             if (selectedTarget === "name") {
-    			document.getElementById("quizPrompt")
-        		.textContent =
-        		"What is this person's nickname?";
-			} else if (selectedTarget === "asal") {
-    			document.getElementById("quizPrompt")
-        			.innerHTML =
-        			`${person.nama_panggilan}<br>
-        			<span class="prompt-subtext">
-            			Where is this person from?
-        			</span>`;
-			} else {
-    			document.getElementById("quizPrompt")
-        			.textContent =
-        			"What is this person's nickname and asal?";
-			}
+                document.getElementById("quizPrompt")
+                    .textContent =
+                    "What is this person's nickname?";
+            } else if (selectedTarget === "asal") {
+                document.getElementById("quizPrompt")
+                    .innerHTML = `${person.nama_panggilan}<span class="prompt-subtext">Where is this person from?</span>`;
+            } else {
+                document.getElementById("quizPrompt")
+                    .textContent =
+                    "What is this person's nickname and asal?";
+            }
 
             if (selectedMode === "multiple") {
                 multipleChoiceBox.classList.remove("hidden");
@@ -832,29 +1019,13 @@
         }
 
         function handleWrongAnswer(person) {
-    		quizStreak = 0;
-
-    		let answerText = "";
-
-    		if (selectedTarget === "name") {
-        		answerText = `${person.nama_panggilan}, ${person.asal}`;
-    		}
-    		else if (selectedTarget === "asal") {
-        		answerText = `${person.asal} (${person.nama_panggilan})`;
-    		}
-    		else {
-        		answerText = `${person.nama_panggilan}, ${person.asal}`;
-    		}
-
-    		document.getElementById("quizFeedback").textContent =
-        		`Wrong. Answer: ${answerText}`;
-
-    		document.getElementById("quizFeedback").className =
-        		"quiz-feedback feedback-wrong";
-
-    		updateQuizNumbers();
-    		showNextButton();
-	}
+            quizStreak = 0;
+            if (!wrongPeople.some(item => item.id === person.id)) wrongPeople.push(person);
+            document.getElementById("quizFeedback").textContent = `Wrong. Answer: ${person.nama_panggilan}, ${person.asal}`;
+            document.getElementById("quizFeedback").className = "quiz-feedback feedback-wrong";
+            updateQuizNumbers();
+            showNextButton();
+        }
 
         function updateQuizNumbers() {
             document.getElementById("quizScore")
@@ -884,11 +1055,7 @@
         }
 
         function finishQuiz() {
-            document.getElementById("quizGame")
-                .classList.add("hidden");
-
-            document.getElementById("quizResult")
-                .classList.remove("hidden");
+            showQuizScreen("result");
 
             const accuracy = Math.round(
                 (quizScore / quizQuestions.length) * 100
@@ -905,6 +1072,14 @@
             document.getElementById("bestStreak")
                 .textContent =
                 `Best streak: ${bestQuizStreak}`;
+
+            renderWrongPeople();
+        }
+
+        function renderWrongPeople(){
+            const section=document.getElementById("wrongReviewSection"),list=document.getElementById("wrongPeopleList");list.innerHTML="";
+            if(!wrongPeople.length){section.classList.add("hidden");return;} section.classList.remove("hidden");
+            wrongPeople.forEach(person=>{const item=document.createElement("div");item.className="wrong-person-item";item.innerHTML=`<img src="/static/faces/${person.image_file}" alt="Photo" onclick="openImage(this.src)"><div><strong>${person.nama_panggilan}</strong><span>${person.asal}</span><small>${getSCDisplayName(person.sc)}</small></div>`;list.appendChild(item);});
         }
 
         function restartQuiz() {
@@ -918,34 +1093,33 @@
             quizScore = 0;
             quizStreak = 0;
             bestQuizStreak = 0;
+            wrongPeople = [];
 
-            document.getElementById("quizResult")
-                .classList.add("hidden");
-
-            document.getElementById("quizGame")
-                .classList.remove("hidden");
-
+            showQuizScreen("face");
             renderQuestion();
         }
 
         function backToSetup() {
-            document.getElementById("quizGame")
-                .classList.add("hidden");
+    document.getElementById("quizGame")
+        .classList.add("hidden");
 
-            document.getElementById("quizResult")
-                .classList.add("hidden");
+    document.getElementById("listQuizGame")
+        .classList.add("hidden");
 
-            document.getElementById("quizSetup")
-                .classList.remove("hidden");
+    document.getElementById("quizResult")
+        .classList.add("hidden");
 
-            document.getElementById("quizFeedback")
-                .textContent = "";
+    document.getElementById("quizSetup")
+        .classList.remove("hidden");
 
-            document.getElementById("nextQuestionBtn")
-                .classList.add("hidden");
+    document.getElementById("quizFeedback")
+        .textContent = "";
 
-            questionAnswered = false;
-        }
+    document.getElementById("nextQuestionBtn")
+        .classList.add("hidden");
+
+    questionAnswered = false;
+}
 
         function openImage(src) {
             document.getElementById("modalImage").src = src;
