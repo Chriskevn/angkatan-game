@@ -121,7 +121,11 @@
 
                         <p>
                             <span>SC</span>
-                            SC {{ p.sc }}
+                            {% if p.sc == "0" %}
+                                Tanpa SC
+                            {% else %}
+                                SC {{ p.sc }}
+                            {% endif %}
                         </p>
                     </div>
                 </article>
