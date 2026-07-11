@@ -95,9 +95,11 @@ def load_people():
     return people
 
 
+PEOPLE = load_people()
+
 @app.route("/")
 def index():
-    people = load_people()
+    people = PEOPLE
     sc_list = sorted(
         {person["sc"] for person in people},
         key=int
