@@ -147,7 +147,13 @@
                         <option value="all">All SC</option>
 
                         {% for sc in sc_list %}
-                        <option value="{{ sc }}">SC {{ sc }}</option>
+                        <option value="{{ sc }}">
+                            {% if sc == "0" %}
+                                Tanpa SC
+                            {% else %}
+                                SC {{ sc }}
+                            {% endif %}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
